@@ -1,8 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const bcrypt = require("bcrypt");
 
-// ✅
+// ✅ Register without hashing password
 exports.register = async (req, res) => {
   try {
     const { email, username, password, confirmPassword, role } = req.body;
@@ -16,12 +15,12 @@ exports.register = async (req, res) => {
     if (password !== confirmPassword) {
       return res.status(400).json({
         success: false,
-        error: "Password and Confirm Password should be same",
+        error: "Password and Confirm Password should be the same",
       });
     }
 
     const emailExists = await User.findOne({ email });
-    
+
     if (emailExists) {
       return res
         .status(400)
@@ -36,12 +35,11 @@ exports.register = async (req, res) => {
         .json({ success: false, error: "Username already exists" });
     }
 
-    const hashedPasssword = await bcrypt.hash(password, 10);
-
+    // Save plain-text password (NOT RECOMMENDED)
     const user = await User.create({
       username,
       email,
-      password: hashedPasssword,
+      password,
       role,
     });
 
@@ -56,7 +54,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// ✅
+// ✅ Login without hashing password
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -72,8 +70,8 @@ exports.login = async (req, res) => {
       return res.status(400).json({ success: false, error: "User not found" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    // Compare plain-text password
+    if (password !== user.password) {
       return res
         .status(400)
         .json({ success: false, error: "Invalid credentials" });
@@ -87,7 +85,7 @@ exports.login = async (req, res) => {
       }
     );
 
-    // create cookie and send res
+    // Create cookie and send response
     const options = {
       expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       httpOnly: true,
@@ -109,7 +107,7 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.log("ERROR WHILE LOGGIN IN THE USER : ", error);
+    console.log("ERROR WHILE LOGGING IN THE USER : ", error);
     return res
       .status(500)
       .json({ success: false, error: "Internal server error" });
